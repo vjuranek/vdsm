@@ -58,6 +58,11 @@ METADATA_SIZE = BLOCK_SIZE_512
 # supports this.
 BLOCK_SIZE_AUTO = 0
 
+# This value is not supported as user input, but it may be returned when
+# detecting underlying storage block size, meaning that the underlying
+# storage does not enforce minimal block size for direct I/O.
+BLOCK_SIZE_NONE = 1
+
 # sanlock possible alignment values, that set a lockspace size
 # In combination with a block size (see above)
 # they set a limit of supported number of hosts:
