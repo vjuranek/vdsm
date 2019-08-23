@@ -30,5 +30,5 @@ $(targets):
 
 push:
 	for name in $(targets); do \
-		podman push $(prefix)-$$name ovirtorg/$(prefix)-$$name; \
+		podman push $(prefix)-$$name vjuranek/$(prefix)-$$name; \
 	done

@@ -25,7 +25,7 @@ matrix:
 
 before_install:
   - docker --version
-  - docker pull ovirtorg/vdsm-test-$DIST
+  - docker pull vjuranek/vdsm-test-$DIST
 
 before_script:
   # autogen.sh needs a tag, but the last tag may be 100 commits in the past,
@@ -47,5 +47,5 @@ script:
     -it \
     --volume `pwd`:/vdsm:Z \
     --volume /run/udev:/run/udev:Z \
-    ovirtorg/vdsm-test-$DIST \
+    vjuranek/vdsm-test-$DIST \
     bash -c "cd /vdsm && ./autogen.sh --system --with-only-python=python$PY && make all $TARGETS"
