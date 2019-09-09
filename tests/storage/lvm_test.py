@@ -35,7 +35,6 @@ from vdsm.common import constants
 from vdsm.storage import constants as sc
 from vdsm.storage import exception as se
 from vdsm.storage import lvm
-from vdsm.storage import misc
 
 from . marks import requires_root
 
@@ -190,7 +189,7 @@ class FakeRunner(object):
 @pytest.fixture
 def fake_runner(monkeypatch):
     runner = FakeRunner()
-    monkeypatch.setattr(misc, "execCmd", runner)
+    monkeypatch.setattr(lvm.LVMCache, "_run_command", runner)
     # Disable delay to speed up testing.
     monkeypatch.setattr(lvm.LVMCache, "RETRY_DELAY", 0)
     return runner
@@ -214,7 +213,7 @@ def test_cmd_success(fake_devices, fake_runner):
         "-o", "+tags",
     ]
 
-    assert kwargs == {"sudo": True, "raw": True}
+    assert kwargs == {}
 
 
 def test_cmd_error(fake_devices, fake_runner):
@@ -262,7 +261,7 @@ def test_cmd_retry_filter_stale(fake_devices, fake_runner):
             dev_filter=lvm._buildFilter(initial_devices),
             locking_type="1"),
     ]
-    assert kwargs == {"sudo": True, "raw": True}
+    assert kwargs == {}
 
     # The seocnd call used a wider filter.
     cmd, kwargs = fake_runner.calls[1]
@@ -274,7 +273,7 @@ def test_cmd_retry_filter_stale(fake_devices, fake_runner):
             dev_filter=lvm._buildFilter(fake_devices),
             locking_type="1"),
     ]
-    assert kwargs == {"sudo": True, "raw": True}
+    assert kwargs == {}
 
 
 def test_cmd_read_only(fake_devices, fake_runner):
@@ -353,7 +352,7 @@ def test_cmd_read_only_filter_stale(fake_devices, fake_runner):
             dev_filter=lvm._buildFilter(initial_devices),
             locking_type="4"),
     ]
-    assert kwargs == {"sudo": True, "raw": True}
+    assert kwargs == {}
 
     # The seocnd call used a wider filter.
     cmd, kwargs = fake_runner.calls[1]
@@ -365,7 +364,7 @@ def test_cmd_read_only_filter_stale(fake_devices, fake_runner):
             dev_filter=lvm._buildFilter(fake_devices),
             locking_type="4"),
     ]
-    assert kwargs == {"sudo": True, "raw": True}
+    assert kwargs == {}
 
     # And then indentical retries with the wider filter.
     assert len(set(repr(c) for c in fake_runner.calls[1:])) == 1

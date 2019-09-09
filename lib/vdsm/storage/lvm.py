@@ -45,6 +45,9 @@ import six
 
 from vdsm import constants
 from vdsm.common import errors
+from vdsm.common import cmdutils
+from vdsm.common import commands
+from vdsm.common.compat import subprocess
 
 from vdsm.storage import devicemapper
 from vdsm.storage import constants as sc
@@ -369,6 +372,21 @@ class LVMCache(object):
 
             return rc, out, err
 
+    def _run_command(self, cmd):
+        p = commands.start(
+            cmd,
+            sudo=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        with commands.terminating(p):
+            out, err = p.communicate()
+
+        log.debug(cmdutils.retcode_log_line(p.returncode, err=err))
+
+        return p.returncode, out, err
+
     def _run_lvm(self, cmd):
         """
         Run LVM command, logging warnings for successful commands.
@@ -383,7 +401,8 @@ class LVMCache(object):
         We log warnings only for successful commands since callers are already
         handling failures.
         """
-        rc, out, err = misc.execCmd(cmd, sudo=True, raw=True)
+
+        rc, out, err = self._run_command(cmd)
 
         out = out.decode("utf-8").splitlines()
         err = err.decode("utf-8").splitlines()
