@@ -112,7 +112,7 @@ def test_build_command_long_filter(fake_devices):
     # If the devices are not specified, include all devices reported by
     # multipath.
     lc = lvm.LVMCache()
-    cmd = lc._addExtraCfg(["lvs", "-o", "+tags"])
+    cmd = lc._cmd._addExtraCfg(["lvs", "-o", "+tags"])
 
     assert cmd == [
         constants.EXT_LVM,
@@ -129,12 +129,12 @@ def test_rebuild_filter_after_invaliation(fake_devices):
     # Check that adding a device and invalidating the filter rebuilds the
     # config with the correct filter.
     lc = lvm.LVMCache()
-    lc._addExtraCfg(["lvs"])
+    lc._cmd._addExtraCfg(["lvs"])
 
     fake_devices.append("/dev/mapper/c")
     lc.invalidateFilter()
 
-    cmd = lc._addExtraCfg(["lvs"])
+    cmd = lc._cmd._addExtraCfg(["lvs"])
     assert cmd[3] == lvm._buildConfig(
         dev_filter=lvm._buildFilter(fake_devices),
         locking_type="1")
@@ -143,12 +143,12 @@ def test_rebuild_filter_after_invaliation(fake_devices):
 def test_build_command_read_only(fake_devices):
     # When cache in read-write mode, use locking_type=1
     lc = lvm.LVMCache()
-    cmd = lc._addExtraCfg(["lvs", "-o", "+tags"])
+    cmd = lc._cmd._addExtraCfg(["lvs", "-o", "+tags"])
     assert " locking_type=1 " in cmd[3]
 
     # When cache in read-only mode, use locking_type=4
     lc.set_read_only(True)
-    cmd = lc._addExtraCfg(["lvs", "-o", "+tags"])
+    cmd = lc._cmd._addExtraCfg(["lvs", "-o", "+tags"])
     assert " locking_type=4 " in cmd[3]
 
 
@@ -189,15 +189,15 @@ class FakeRunner(object):
 @pytest.fixture
 def fake_runner(monkeypatch):
     runner = FakeRunner()
-    monkeypatch.setattr(lvm.LVMCache, "_run_command", runner)
+    monkeypatch.setattr(lvm.LvmCommand, "_run_command", runner)
     # Disable delay to speed up testing.
-    monkeypatch.setattr(lvm.LVMCache, "RETRY_DELAY", 0)
+    monkeypatch.setattr(lvm.LvmCommand, "RETRY_DELAY", 0)
     return runner
 
 
 def test_cmd_success(fake_devices, fake_runner):
     lc = lvm.LVMCache()
-    rc, out, err = lc.cmd(["lvs", "-o", "+tags"])
+    rc, out, err = lc.run(["lvs", "-o", "+tags"])
 
     assert rc == 0
     assert len(fake_runner.calls) == 1
@@ -220,12 +220,12 @@ def test_cmd_error(fake_devices, fake_runner):
     lc = lvm.LVMCache()
 
     # Require 2 calls to succeed.
-    assert lc.READ_ONLY_RETRIES > 1
+    assert lc._cmd.READ_ONLY_RETRIES > 1
     fake_runner.retries = 1
 
     # Since the filter is correct, the error should be propagated to the caller
     # after the first call.
-    rc, out, err = lc.cmd(["lvs", "-o", "+tags"])
+    rc, out, err = lc.run(["lvs", "-o", "+tags"])
 
     assert rc == 1
     assert len(fake_runner.calls) == 1
@@ -235,7 +235,7 @@ def test_cmd_retry_filter_stale(fake_devices, fake_runner):
     # Make a call to load the cache.
     initial_devices = fake_devices[:]
     lc = lvm.LVMCache()
-    lc.cmd(["fake"])
+    lc.run(["fake"])
     del fake_runner.calls[:]
 
     # Add a new device to the system. This will makes the cached filter stale,
@@ -243,10 +243,10 @@ def test_cmd_retry_filter_stale(fake_devices, fake_runner):
     fake_devices.append("/dev/mapper/c")
 
     # Require 2 calls to succeed.
-    assert lc.READ_ONLY_RETRIES > 1
+    assert lc._cmd.READ_ONLY_RETRIES > 1
     fake_runner.retries = 1
 
-    rc, out, err = lc.cmd(["fake"])
+    rc, out, err = lc.run(["fake"])
 
     assert rc == 0
     assert len(fake_runner.calls) == 2
@@ -281,10 +281,10 @@ def test_cmd_read_only(fake_devices, fake_runner):
     lc.set_read_only(True)
 
     # Require 3 calls to succeed.
-    assert lc.READ_ONLY_RETRIES > 2
+    assert lc._cmd.READ_ONLY_RETRIES > 2
     fake_runner.retries = 2
 
-    rc, out, err = lc.cmd(["fake"])
+    rc, out, err = lc.run(["fake"])
 
     # Call should succeed after 3 identical calls.
     assert rc == 0
@@ -297,12 +297,12 @@ def test_cmd_read_only_max_retries(fake_devices, fake_runner):
     lc.set_read_only(True)
 
     # Require max retries to succeed.
-    fake_runner.retries = lc.READ_ONLY_RETRIES
-    rc, out, err = lc.cmd(["fake"])
+    fake_runner.retries = lc._cmd.READ_ONLY_RETRIES
+    rc, out, err = lc.run(["fake"])
 
     # Call should succeed (1 call + max retries).
     assert rc == 0
-    assert len(fake_runner.calls) == lc.READ_ONLY_RETRIES + 1
+    assert len(fake_runner.calls) == lc._cmd.READ_ONLY_RETRIES + 1
     assert len(set(repr(c) for c in fake_runner.calls)) == 1
 
 
@@ -311,20 +311,20 @@ def test_cmd_read_only_max_retries_fail(fake_devices, fake_runner):
     lc.set_read_only(True)
 
     # Require max retries + 1 to succeed.
-    fake_runner.retries = lc.READ_ONLY_RETRIES + 1
+    fake_runner.retries = lc._cmd.READ_ONLY_RETRIES + 1
 
-    rc, out, err = lc.cmd(["fake"])
+    rc, out, err = lc.run(["fake"])
 
     # Call should fail (1 call + max retries).
     assert rc == 1
-    assert len(fake_runner.calls) == lc.READ_ONLY_RETRIES + 1
+    assert len(fake_runner.calls) == lc._cmd.READ_ONLY_RETRIES + 1
 
 
 def test_cmd_read_only_filter_stale(fake_devices, fake_runner):
     # Make a call to load the cache.
     initial_devices = fake_devices[:]
     lc = lvm.LVMCache()
-    lc.cmd(["fake"])
+    lc.run(["fake"])
     del fake_runner.calls[:]
 
     # Add a new device to the system. This will makes the cached filter stale,
@@ -332,15 +332,15 @@ def test_cmd_read_only_filter_stale(fake_devices, fake_runner):
     fake_devices.append("/dev/mapper/c")
 
     # Require max retries + 1 calls to succeed.
-    fake_runner.retries = lc.READ_ONLY_RETRIES + 1
+    fake_runner.retries = lc._cmd.READ_ONLY_RETRIES + 1
 
     lc.set_read_only(True)
-    rc, out, err = lc.cmd(["fake"])
+    rc, out, err = lc.run(["fake"])
 
     # Call should succeed after one call with stale filter, one call with wider
     # filter and max retries identical calls.
     assert rc == 0
-    assert len(fake_runner.calls) == lc.READ_ONLY_RETRIES + 2
+    assert len(fake_runner.calls) == lc._cmd.READ_ONLY_RETRIES + 2
 
     # The first call used the stale cache filter.
     cmd, kwargs = fake_runner.calls[0]
@@ -373,7 +373,7 @@ def test_cmd_read_only_filter_stale(fake_devices, fake_runner):
 def test_cmd_read_only_filter_stale_fail(fake_devices, fake_runner):
     # Make a call to load the cache.
     lc = lvm.LVMCache()
-    lc.cmd(["fake"])
+    lc.run(["fake"])
     del fake_runner.calls[:]
 
     # Add a new device to the system. This will makes the cached filter stale,
@@ -381,14 +381,14 @@ def test_cmd_read_only_filter_stale_fail(fake_devices, fake_runner):
     fake_devices.append("/dev/mapper/c")
 
     # Require max retries + 2 calls to succeed.
-    fake_runner.retries = lc.READ_ONLY_RETRIES + 2
+    fake_runner.retries = lc._cmd.READ_ONLY_RETRIES + 2
 
     lc.set_read_only(True)
-    rc, out, err = lc.cmd(["fake"])
+    rc, out, err = lc.run(["fake"])
 
     # Call should fail after max retries + 2 calls.
     assert rc == 1
-    assert len(fake_runner.calls) == lc.READ_ONLY_RETRIES + 2
+    assert len(fake_runner.calls) == lc._cmd.READ_ONLY_RETRIES + 2
 
 
 def test_suppress_warnings(fake_devices, fake_runner):
@@ -399,7 +399,7 @@ def test_suppress_warnings(fake_devices, fake_runner):
   after"""
 
     lc = lvm.LVMCache()
-    rc, out, err = lc.cmd(["fake"])
+    rc, out, err = lc.run(["fake"])
     assert rc == 0
     assert err == [u"  before", u"  after"]
 
@@ -439,7 +439,7 @@ def test_command_concurrency(fake_devices, fake_runner, workers, read_only):
     start = time.time()
     try:
         for i in range(count):
-            workers.start_thread(lc.cmd, ["fake", i])
+            workers.start_thread(lc.run, ["fake", i])
     finally:
         workers.join()
 
@@ -448,7 +448,8 @@ def test_command_concurrency(fake_devices, fake_runner, workers, read_only):
 
     # This takes about 1 second on my idle laptop. Add more time to avoid
     # failures on overloaded slave.
-    assert elapsed < fake_runner.delay * count / lc.MAX_COMMANDS + 1.0
+    threshold = fake_runner.delay * count / lc._cmd.MAX_COMMANDS + 1.0
+    assert elapsed < threshold
 
 
 def test_change_read_only_mode(fake_devices, fake_runner, workers):
@@ -465,7 +466,7 @@ def test_change_read_only_mode(fake_devices, fake_runner, workers):
     try:
         # Start few commands in read-write mode.
         for i in range(2):
-            workers.start_thread(run_after, 0.0, lc.cmd, ["read-write"])
+            workers.start_thread(run_after, 0.0, lc.run, ["read-write"])
 
         # After 0.1 seconds change read only mode to True. Should wait for the
         # running commands before changing the mode.
@@ -474,7 +475,7 @@ def test_change_read_only_mode(fake_devices, fake_runner, workers):
         # After 0.2 seconds, start new commands. Should wait until the mode is
         # changed and run in read-only mode.
         for i in range(2):
-            workers.start_thread(run_after, 0.2, lc.cmd, ["read-only"])
+            workers.start_thread(run_after, 0.2, lc.run, ["read-only"])
     finally:
         workers.join()
 
