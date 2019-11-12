@@ -396,7 +396,8 @@ def test_suppress_warnings(fake_devices, no_delay):
   before
   WARNING: This metadata update is NOT backed up.
   WARNING: Combining activation change with other commands is not advised.
-  after"""
+  after
+  Configuration setting "global/event_activation" unknown."""
 
     lc = lvm.LVMCache(fake_runner)
     rc, out, err = lc.cmd(["fake"])
