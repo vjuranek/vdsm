@@ -42,6 +42,11 @@ from . marks import requires_root
 FAKE_DMSETUP = os.path.join(os.path.dirname(__file__), "fake-dmsetup")
 
 
+broken_on_ci = pytest.mark.skipif(
+    "TRAVIS_CI" in os.environ,
+    reason="device mapper doesn't work properly in constainers")
+
+
 @pytest.fixture
 def fake_dmsetup(monkeypatch):
     monkeypatch.setattr(devicemapper, "EXT_DMSETUP", FAKE_DMSETUP)
@@ -112,6 +117,16 @@ def test_get_paths_status(fake_dmsetup):
         "66:176": "failed",
     }
     assert res == expected
+
+
+@broken_on_ci
+@requires_root
+def test_remove_mapping(zero_dm_device):
+    device_path = "{}{}".format(DMPATH_PREFIX, zero_dm_device)
+    assert os.path.exists(device_path)
+
+    devicemapper.removeMapping(zero_dm_device)
+    assert not os.path.exists(device_path)
 
 
 def test_block_device_name():
