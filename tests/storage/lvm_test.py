@@ -516,6 +516,41 @@ def test_change_read_only_mode(fake_devices, no_delay, workers):
 
 @requires_root
 @pytest.mark.root
+def test_movepv(monkeypatch, tmp_storage):
+    # Disable lvmpolld in config for lvm commands as the daemon doesn't run on
+    # CI machines.
+    lvm_conf = lvm.LVMCONF_TEMPLATE.replace(
+        "use_lvmetad=0\n",
+        "use_lvmetad=0\n use_lvmpolld=0\n")
+    monkeypatch.setattr(lvm, "LVMCONF_TEMPLATE", lvm_conf)
+
+    dev_size = 10 * GiB
+    dev1 = tmp_storage.create_device(dev_size)
+    dev2 = tmp_storage.create_device(dev_size)
+    vg_name = str(uuid.uuid4())
+    lv_name = "lv_to_be_moved"
+
+    lvm.set_read_only(False)
+
+    lvm.createVG(vg_name, [dev1, dev2], "initial-tag", 128)
+
+    # Create LV on the first device.
+    lvm.createLV(vg_name, lv_name, 1024, device=dev1)
+
+    # Move LV on the second device.
+    lvm.movePV(vg_name, dev1, [dev2])
+
+    # Remove first device. If pvmove doesn't happen, this would fail with
+    # "Physical volume /dev/loop still in use"
+    lvm.reduceVG(vg_name, dev1)
+
+    # Verify LV still exists (on the second device).
+    lv = lvm.getLV(vg_name, lv_name)
+    assert int(lv.size) == 1 * GiB
+
+
+@requires_root
+@pytest.mark.root
 @pytest.mark.parametrize("read_only", [True, False])
 def test_vg_create_remove_single_device(tmp_storage, read_only):
     dev_size = 20 * GiB
