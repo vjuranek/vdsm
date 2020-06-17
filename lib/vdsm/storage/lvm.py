@@ -1089,29 +1089,6 @@ def _initpvs(devices, metadataSize, force=False):
         raise se.PhysDevInitializationError(str(devices))
 
 
-def getLvDmName(vgName, lvName):
-    return "%s-%s" % (vgName.replace("-", "--"), lvName)
-
-
-def removeVgMapping(vgName):
-    """
-    Removes the mapping of the specified volume group.
-    Utilizes the fact that the mapping created by the LVM looks like that
-    e45c12b0--f520--498a--82bb--c6cb294b990f-master
-    i.e vg name concatenated with volume name (dash is escaped with dash)
-    """
-    mappingPrefix = getLvDmName(vgName, "")
-    mappings = devicemapper.getAllMappedDevices()
-
-    for mapping in mappings:
-        if not mapping.startswith(mappingPrefix):
-            continue
-        try:
-            devicemapper.removeMapping(mapping)
-        except Exception:
-            pass
-
-
 # Activation of the whole vg is assumed to be used nowhere.
 # This is a separate function just in case.
 def _setVgAvailability(vgs, available):
