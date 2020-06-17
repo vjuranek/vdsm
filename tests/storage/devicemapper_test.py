@@ -205,22 +205,6 @@ def test_is_dm_device(zero_dm_device):
 
 @broken_on_ci
 @requires_root
-def test_get_all_mapped_devices(zero_dm_device):
-    devices = devicemapper.getAllMappedDevices()
-    assert zero_dm_device in devices
-
-
-@broken_on_ci
-@requires_root
-def test_get_all_slaves(zero_dm_device):
-    slaves = devicemapper.getAllSlaves()
-    assert zero_dm_device in slaves
-    # Zero device mapping has no slaves.
-    assert slaves[zero_dm_device] == []
-
-
-@broken_on_ci
-@requires_root
 def test_get_slaves(zero_dm_device):
     slaves = devicemapper.getSlaves(zero_dm_device)
     # Zero device mapping has no slaves.

@@ -26,7 +26,6 @@ import os
 import re
 
 from collections import namedtuple
-from glob import glob
 
 from vdsm.common import cmdutils
 from vdsm.common import supervdsm
@@ -123,14 +122,6 @@ def isDmDevice(devName):
     return os.path.exists("/sys/block/%s/dm" % devName)
 
 
-def getAllSlaves():
-    deps = {}
-    for name in getAllMappedDevices():
-        deps[name] = getSlaves(name)
-
-    return deps
-
-
 def removeMapping(deviceName):
     if os.geteuid() != 0:
         return supervdsm.getProxy().devicemapper_removeMapping(deviceName)
@@ -140,16 +131,6 @@ def removeMapping(deviceName):
         commands.run(cmd)
     except cmdutils.Error as e:
         raise Error("Could not remove mapping {!r}: {}".format(deviceName, e))
-
-
-def getAllMappedDevices():
-    devices = glob("/sys/devices/virtual/block/dm-*")
-    names = []
-    for device in devices:
-        dmName = os.path.basename(device)
-        names.append(getDevName(dmName))
-
-    return tuple(names)
 
 
 def getHolders(slaveName):
