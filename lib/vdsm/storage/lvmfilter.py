@@ -49,6 +49,7 @@ from vdsm.common.compat import subprocess
 LSBLK = "/usr/bin/lsblk"
 LVM = "/usr/sbin/lvm"
 ID_LINK_PREFIX = "/dev/disk/by-id/lvm-pv-uuid-"
+PROC_DEVICES = "/proc/devices"
 
 log = logging.getLogger("lvmfilter")
 
@@ -87,6 +88,27 @@ class InvalidFilter(Exception):
         return self.msg.format(self=self)
 
 
+class NoDeviceMapperMajorNumber(Exception):
+    msg = "Cannot determine major number for device-mapper devices."
+
+    def __str__(self):
+        return self.msg
+
+
+def dm_major_number():
+    """
+    Finds major number for device-mapper type devices. In most of the case
+    the major number is 253, but it can vary, so better to find this number out
+    on each system.
+    """
+    with open(PROC_DEVICES) as f:
+        for line in f.readlines():
+            if "device-mapper" in line:
+                major, device = line.strip().split()
+                return major
+    raise NoDeviceMapperMajorNumber()
+
+
 def find_lvm_mounts():
     """
     Found mounted logical volumes and the underlying block devices required for
@@ -113,10 +135,10 @@ def find_lvm_mounts():
         #   `-/dev/vda
         # With this we can --include only device mapper top devices.
         "--inverse",
-        # Include only device mapper (253) devices. This includes both "lvm"
+        # Include only device mapper devices. This includes both "lvm"
         # and "mpath" devices. We will filter the results later to extract only
         # the "lvm" devices.
-        "--include", "253",
+        "--include", dm_major_number(),
         # Do not print holder devices or slaves, since we are interested only
         # in lvm devices.
         "--nodeps",
