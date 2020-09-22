@@ -1481,10 +1481,13 @@ def deactivateVG(vgName):
     rc, out, err = _lvminfo.cmd(cmd, _lvminfo._getVGDevs([vgName]))
     _lvminfo._invalidatelvs(vgName)
     if rc != 0:
-        # During deactivation we ignore error here because we don't care about
-        # this vg anymore.
-        log.info("deactivate vg %s failed: rc %s - %s %s (ignored)" %
+        log.info("Error deactivating VG %s: rc=%s out=%s err=%s" %
                  (vgName, rc, out, err))
+
+        # When the storage is not available, DM mappings for LVs are not
+        # removed by LVM, so we have to clean it up manually. For more details
+        # see https://bugzilla.redhat.com/1881468
+        removeVgMapping(vgName)
 
 
 def invalidateVG(vgName, invalidateLVs=True, invalidatePVs=False):
