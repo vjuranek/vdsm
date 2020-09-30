@@ -30,7 +30,7 @@ from vdsm.storage import fileSD
 from vdsm.storage import outOfProcess as oop
 from vdsm.storage import sd
 
-from . import userstorage
+import userstorage
 
 EXAMPLE_DATA = {
     (sc.BLOCK_SIZE_512, sc.ALIGNMENT_1M): """\

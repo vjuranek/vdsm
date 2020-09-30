@@ -31,6 +31,8 @@ import uuid
 
 import pytest
 
+import userstorage
+
 from vdsm.common.units import MiB, GiB
 from vdsm.storage import clusterlock
 from vdsm.storage import constants as sc
@@ -41,7 +43,6 @@ from vdsm.storage import qemuimg
 from vdsm.storage import sd
 
 from . import qemuio
-from . import userstorage
 from . marks import requires_bitmaps_support
 from . marks import requires_unprivileged_user
 from . storagetestlib import chmod

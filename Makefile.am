@@ -141,7 +141,7 @@ tests: tox
 
 .PHONY: storage
 storage:
-	python3 tests/storage/userstorage.py setup
+	python3 tests/userstorage.py setup
 
 all-local: \
 	vdsm.spec

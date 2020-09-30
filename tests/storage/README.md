@@ -9,14 +9,14 @@ or fail (depending on the test).
 
 To setup storage for these tests, run:
 
-    python tests/storage/userstorage.py setup
+    python tests/userstorage.py setup
 
 This can be run once when setting up development environment, and must
 be run again after rebooting the host.
 
 If you want to tear down the user storage, run:
 
-    python tests/storage/userstorage.py teardown
+    python tests/userstorage.py teardown
 
 There is no need to tear down the storage normally. The loop devices are
 backed up by sparse files and do not consume much resources.

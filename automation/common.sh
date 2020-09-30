@@ -196,7 +196,7 @@ run_tests() {
 
 # Set up storage for storage tests. The storage is tore down in teardown().
 setup_storage() {
-    ${CI_PYTHON} tests/storage/userstorage.py setup
+    ${CI_PYTHON} tests/userstorage.py setup
 }
 
 # Teardown storage set up in setup_storage.
@@ -207,7 +207,7 @@ setup_storage() {
 # NOTE: should be called only in teardown context. Always succeeds, even if
 # tearing down storage failed.
 teardown_storage() {
-    ${CI_PYTHON} tests/storage/userstorage.py teardown \
+    ${CI_PYTHON} tests/userstorage.py teardown \
         || echo "WARNING: Ingoring error while tearing down user storage"
 }
 

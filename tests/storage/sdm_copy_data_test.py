@@ -45,8 +45,9 @@ from storage.storagetestlib import (
     write_qemu_chain,
 )
 
+import userstorage
+
 from . import qemuio
-from . import userstorage
 
 from testValidation import broken_on_ci
 from testlib import make_uuid

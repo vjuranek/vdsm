@@ -36,10 +36,11 @@ from vdsm.storage import exception as se
 from vdsm.storage import outOfProcess as oop
 from vdsm.storage import xlease
 
+import userstorage
+
 from testlib import make_uuid
 
 from . fakesanlock import FakeSanlock
-from . import userstorage
 
 
 class ReadError(Exception):

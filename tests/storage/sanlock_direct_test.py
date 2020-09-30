@@ -27,7 +27,8 @@ from vdsm.common import commands
 from vdsm.storage import sanlock_direct
 from vdsm.storage import constants as sc
 
-from . import userstorage
+import userstorage
+
 from .marks import requires_root
 
 # Wait 1 second for lockspace initialization for quick tests.

@@ -52,11 +52,12 @@ from vdsm.storage.sdc import sdCache
 from vdsm.storage.task import Task, Recovery
 
 import fakelib
+import userstorage
+
 from .fakesanlock import FakeSanlock
 from . import tmpfs
 from . import tmprepo
 from . import tmpstorage
-from . import userstorage
 
 
 log = logging.getLogger("test")
