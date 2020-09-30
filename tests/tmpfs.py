@@ -29,7 +29,7 @@ from vdsm.common import commands
 from vdsm.common.units import GiB
 from vdsm.storage import constants as sc
 
-from . cleanup import CleanupError
+from cleanup import CleanupError
 
 log = logging.getLogger("test")
 

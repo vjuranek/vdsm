@@ -31,8 +31,9 @@ import six
 from vdsm.common import commands
 from vdsm.common import cmdutils
 
-from . cleanup import CleanupError
-from . import loopback
+import loopback
+
+from cleanup import CleanupError
 
 log = logging.getLogger("test")
 

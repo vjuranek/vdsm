@@ -26,183 +26,24 @@ from __future__ import absolute_import
 from __future__ import division
 
 import logging
-import os
 import sys
 import types
-
-from contextlib import closing
 
 import pytest
 
 from vdsm import jobs
-from vdsm.common import threadlocal
 from vdsm.storage import blockSD
 from vdsm.storage import clusterlock
-from vdsm.storage import constants as sc
 from vdsm.storage import fallocate
-from vdsm.storage import fileSD
 from vdsm.storage import fileVolume
-from vdsm.storage import lvm
-from vdsm.storage import managedvolumedb
-from vdsm.storage import multipath
-from vdsm.storage import outOfProcess as oop
-from vdsm.storage import resourceManager as rm
 from vdsm.storage import xlease
-from vdsm.storage.sdc import sdCache
-from vdsm.storage.task import Task, Recovery
+from vdsm.storage.task import Recovery
 
 import fakelib
-import userstorage
 
 from .fakesanlock import FakeSanlock
-from . import tmpfs
-from . import tmprepo
-from . import tmpstorage
-
 
 log = logging.getLogger("test")
-
-
-@pytest.fixture
-def tmp_repo(tmpdir, monkeypatch, tmp_fs):
-    """
-    Provide a temporary repo directory and patch vsdm to use it instead of
-    /rhev/data-center.
-    """
-    repo = tmprepo.TemporaryRepo(tmpdir, tmp_fs)
-
-    # Patch repo directory.
-    monkeypatch.setattr(sc, "REPO_DATA_CENTER", repo.path)
-    monkeypatch.setattr(sc, "REPO_MOUNT_DIR", repo.mnt_dir)
-
-    # Patch multipath discovery and resize
-    monkeypatch.setattr(multipath, "rescan", lambda: None)
-    monkeypatch.setattr(multipath, "resize_devices", lambda: None)
-
-    # Patch the resource manager.
-    manager = rm._ResourceManager()
-    manager.registerNamespace(sc.STORAGE, rm.SimpleResourceFactory())
-    monkeypatch.setattr(rm, "_manager", manager)
-
-    # Invalidate sdCache so stale data from previous test will affect
-    # this test.
-    sdCache.refresh()
-    sdCache.knownSDs.clear()
-
-    try:
-        yield repo
-    finally:
-        # ioprocess is typically invoked from tests using tmp_repo. This
-        # terminate ioprocess instances, avoiding thread and process leaks in
-        # tests, and errors in __del__ during test shutdown.
-        oop.stop()
-
-        # Invalidate sdCache so stale data from this test will affect
-        # the next test.
-        sdCache.refresh()
-        sdCache.knownSDs.clear()
-
-
-@pytest.fixture
-def tmp_fs(tmp_storage):
-    """
-    Provides a temporary file system created on provided device. Contains also
-    support for mounting newly created FS.
-    """
-    fs = tmpfs.TemporaryFS(tmp_storage)
-    with closing(fs):
-        yield fs
-
-
-@pytest.fixture
-def tmp_storage(monkeypatch, tmpdir):
-    """
-    Provide a temporary storage for creating temporary block devices, and patch
-    vsdm to use it instead of multipath device.
-    """
-    storage = tmpstorage.TemporaryStorage(str(tmpdir))
-
-    # Get devices from our temporary storage instead of multipath.
-    monkeypatch.setattr(multipath, "getMPDevNamesIter", storage.devices)
-
-    # Use custom /run/vdsm/storage directory, used to keep symlinks to active
-    # lvs.
-    storage_dir = str(tmpdir.join("storage"))
-    os.mkdir(storage_dir)
-    monkeypatch.setattr(sc, "P_VDSM_STORAGE", storage_dir)
-
-    with closing(storage):
-        # Don't let other test break us...
-        lvm.invalidateCache()
-        try:
-            yield storage
-        finally:
-            # and don't break other tests.
-            lvm.invalidateCache()
-            stats = lvm.cache_stats()
-            log.info("LVM cache hit ratio: %.2f%% (hits: %d misses: %d)",
-                     stats["hit_ratio"], stats["hits"], stats["misses"])
-
-
-@pytest.fixture(
-    scope="module",
-    params=[
-        userstorage.PATHS["mount-512"],
-        userstorage.PATHS["mount-4k"],
-    ],
-    ids=str,
-)
-def tmp_mount(request):
-    mount = request.param
-    if not mount.exists():
-        pytest.xfail("{} storage not available".format(mount.name))
-    return mount
-
-
-@pytest.fixture
-def fake_access(monkeypatch):
-    """
-    Fake access checks used in file based storage using supervdsm.
-
-    Returned object has a "allowed" attribute set to True to make access check
-    succeed. To make access check fail, set it to False.
-    """
-    class fake_access:
-        allowed = True
-
-    fa = fake_access()
-    monkeypatch.setattr(fileSD, "validateDirAccess", lambda path: fa.allowed)
-    return fa
-
-
-@pytest.fixture
-def fake_task(monkeypatch):
-    """
-    Create fake task, expected in various places in the code. In the real code
-    a task is created for every HSM public call by the dispatcher.
-    """
-    monkeypatch.setattr(threadlocal.vars, 'task', Task("fake-task-id"))
-
-
-@pytest.fixture
-def fake_rescan(monkeypatch):
-    """
-    Fake rescanning of devices. Do nothing instead.
-    """
-    def rescan():
-        pass
-
-    monkeypatch.setattr(multipath, "rescan", rescan)
-
-
-@pytest.fixture
-def tmp_db(monkeypatch, tmpdir):
-    """
-    Create managed volume database in temporal directory.
-    """
-    db_file = str(tmpdir.join("managedvolumes.db"))
-    monkeypatch.setattr(managedvolumedb, "DB_FILE", db_file)
-    managedvolumedb.create_db()
 
 
 @pytest.fixture

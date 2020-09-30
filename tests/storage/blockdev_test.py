@@ -35,7 +35,8 @@ from vdsm.storage import constants as sc
 from vdsm.storage import directio
 from vdsm.storage import exception as se
 
-from . import loopback
+import loopback
+
 from . marks import requires_root
 
 # Zeroing and discarding block device is instant, so we can use real lv size.

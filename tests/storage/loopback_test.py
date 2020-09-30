@@ -31,7 +31,8 @@ from vdsm.storage import multipath
 
 import testing
 
-from . import loopback
+import loopback
+
 from . marks import requires_root
 from . marks import requires_loopback_sector_size
 
