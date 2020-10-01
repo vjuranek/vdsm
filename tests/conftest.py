@@ -83,7 +83,7 @@ def tmp_repo(tmpdir, monkeypatch, tmp_fs):
 
     # Patch the resource manager.
     manager = rm._ResourceManager()
-    manager.registerNamespace(sc.STORAGE, rm.SimpleResourceFactory())
+    manager.registerNamespace("TEST_STORAGE", rm.SimpleResourceFactory())
     monkeypatch.setattr(rm, "_manager", manager)
 
     # Invalidate sdCache so stale data from previous test will affect
