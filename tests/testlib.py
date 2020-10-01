@@ -40,6 +40,8 @@ import threading
 from contextlib import contextmanager
 import xml.etree.ElementTree as ET
 
+import pytest
+
 try:
     from unittest import mock
 except ImportError:  # py2
@@ -651,3 +653,30 @@ def ipv6_enabled():
         return False
     # Kernel supports ipv6, but it may be disabled.
     return int(value) == 0
+
+
+class Config(object):
+    """
+    Wrap a userstorage.Path implementation, adding a block_size, max_hosts and
+    domain_version to simplify fixtures using storage for creating mounts
+    and domains.
+    """
+
+    def __init__(self, storage, max_hosts, domain_version):
+        if not storage.exists():
+            pytest.xfail("{} storage not available".format(storage.name))
+
+        self.path = tempfile.mkdtemp(dir=storage.path)
+        self.block_size = storage.sector_size
+        self.max_hosts = max_hosts
+        self.domain_version = domain_version
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        shutil.rmtree(self.path)
+
+    def __repr__(self):
+        "path: {}, block size: {}, max hosts: {}, domain version: {}".format(
+            self.path, self.block_size, self.max_hosts, self.domain_version)
