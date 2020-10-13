@@ -25,7 +25,7 @@ import pytest
 
 from vdsm.virt.vmdevices import storage
 
-import vmfakelib
+from . import vmfakelib
 
 
 def test_secret_define_new():
