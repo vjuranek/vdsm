@@ -81,6 +81,7 @@ from vdsm.storage import qemuimg
 from vdsm.storage import sdc
 
 from vdsm.virt import backup
+from vdsm.virt import block_device
 from vdsm.virt import blockjob
 from vdsm.virt import domxml_preprocess
 from vdsm.virt import drivemonitor
@@ -102,7 +103,6 @@ from vdsm.virt.domain_descriptor import DomainDescriptor
 from vdsm.virt.domain_descriptor import MutableDomainDescriptor
 from vdsm.virt.jobs import snapshot
 from vdsm.virt import vmdevices
-from vdsm.virt.vmdevices import drivename
 from vdsm.virt.vmdevices import lookup
 from vdsm.virt.vmdevices import hwclass
 from vdsm.virt.vmdevices import storagexml
@@ -123,11 +123,6 @@ _NO_CPU_QUOTA = 0
 
 # A libvirt constant for undefined cpu period
 _NO_CPU_PERIOD = 0
-
-
-class VolumeError(RuntimeError):
-    def __str__(self):
-        return "Bad volume specification " + RuntimeError.__str__(self)
 
 
 class DoubleDownError(RuntimeError):
@@ -4391,58 +4386,10 @@ class Vm(object):
                       actionToString(action))
 
     def changeCD(self, cdromspec):
-        drivespec = cdromspec['path']
-        blockdev = drivename.make(
-            cdromspec['iface'], cdromspec['index'])
-        iface = cdromspec['iface']
-        return self._changeBlockDev('cdrom', blockdev, drivespec, iface,
-                                    force=bool(drivespec))
+        return block_device.change_cd(self, cdromspec)
 
     def changeFloppy(self, drivespec):
-        return self._changeBlockDev('floppy', 'fda', drivespec)
-
-    def _changeBlockDev(self, vmDev, blockdev, drivespec, iface=None,
-                        force=True):
-        try:
-            path = self.cif.prepareVolumePath(drivespec)
-        except VolumeError:
-            raise exception.ImageFileNotFound()
-
-        diskelem = vmxml.Element('disk', type='file', device=vmDev)
-        diskelem.appendChildWithArgs('source', file=path)
-
-        target = {'dev': blockdev}
-        if iface:
-            target['bus'] = iface
-
-        diskelem.appendChildWithArgs('target', **target)
-        diskelem_xml = xmlutils.tostring(diskelem)
-
-        self.log.info("changeBlockDev: using disk XML: %s", diskelem_xml)
-
-        changed = False
-        if not force:
-            try:
-                self._dom.updateDeviceFlags(diskelem_xml)
-            except libvirt.libvirtError:
-                self.log.info("regular updateDeviceFlags failed")
-            else:
-                changed = True
-
-        if not changed:
-            try:
-                self._dom.updateDeviceFlags(
-                    diskelem_xml, libvirt.VIR_DOMAIN_DEVICE_MODIFY_FORCE
-                )
-            except libvirt.libvirtError:
-                self.log.exception("forceful updateDeviceFlags failed")
-                self.cif.teardownVolumePath(drivespec)
-                raise exception.ChangeDiskFailed()
-
-        if vmDev in self.conf:
-            self.cif.teardownVolumePath(self.conf[vmDev])
-
-        return {'vmList': {}}
+        return block_device.change_floppy(self, drivespec)
 
     def setTicket(self, otp, seconds, connAct, params):
         """
