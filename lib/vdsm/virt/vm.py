@@ -528,6 +528,10 @@ class Vm(object):
         return hugepagesz
 
     @property
+    def md_descriptor(self):
+        return self._md_desc
+
+    @property
     def nr_hugepages(self):
         if not self.hugepages:
             return 0
@@ -1921,7 +1925,7 @@ class Vm(object):
                 self._md_desc, disk_devices, guest_disk_mapping, self.log
             )
         try:
-            self._sync_metadata()
+            self.sync_metadata()
             self._updateDomainDescriptor()
         except (libvirt.libvirtError, virdomain.NotConnectedError) as e:
             self.log.warning("Couldn't update metadata: %s", e)
@@ -2287,7 +2291,7 @@ class Vm(object):
             vmdevices.common.save_device_metadata(
                 self._md_desc, self._devices, self.log)
             self.save_custom_properties()
-            self._sync_metadata()
+            self.sync_metadata()
 
         try:
             self.guestAgent.start()
@@ -2344,7 +2348,7 @@ class Vm(object):
                 "hotplugged device %s", dev_obj)
         else:
             self._set_device_metadata(attrs, data)
-            self._sync_metadata()
+            self.sync_metadata()
 
     def _hotunplug_device_metadata(self, dev_class, dev_obj):
         attrs, _ = get_metadata(dev_class, dev_obj)
@@ -2354,7 +2358,7 @@ class Vm(object):
                 "hotunplugged device %s", dev_obj)
         else:
             self._clear_device_metadata(attrs)
-            self._sync_metadata()
+            self.sync_metadata()
 
     def _set_device_metadata(self, attrs, dev_conf):
         """
@@ -3773,7 +3777,7 @@ class Vm(object):
             self._dom = virdomain.Notifying(
                 self._connection.lookupByUUIDString(self.id),
                 self._timeoutExperienced)
-            self._sync_metadata()
+            self.sync_metadata()
 
             if not migrationFinished:
                 state = self._dom.state(0)
@@ -3891,7 +3895,7 @@ class Vm(object):
                         # don't belong to metadata.
                         if k in dev:
                             dev[k] = v
-                self._sync_metadata()
+                self.sync_metadata()
                 break
         else:
             self.log.error("Unable to update the drive object for: %s",
@@ -4251,7 +4255,7 @@ class Vm(object):
             ) as dev:
                 del dev['diskReplicate']
 
-        self._sync_metadata()
+        self.sync_metadata()
 
     def _persist_drive_replica(self, drive, replica):
         with self._confLock:
@@ -4260,7 +4264,7 @@ class Vm(object):
             ) as dev:
                 dev['diskReplicate'] = replica
 
-        self._sync_metadata()
+        self.sync_metadata()
 
     def _diskSizeExtendCow(self, drive, newSizeBytes):
         try:
@@ -4570,7 +4574,7 @@ class Vm(object):
                 except KeyError:
                     # It been cleared by a different flow on the metadata.
                     pass
-        self._sync_metadata()
+        self.sync_metadata()
 
     def save_custom_properties(self):
         if self.min_cluster_version(4, 2):
@@ -4580,7 +4584,7 @@ class Vm(object):
         # in the XML metadata.
         self._md_desc.add_custom(self._custom['custom'])
 
-    def _sync_metadata(self):
+    def sync_metadata(self):
         if self._external:
             return
         self._md_desc.dump(self._dom)
@@ -5113,7 +5117,7 @@ class Vm(object):
                                job['jobID'], drive['imageID'])
                 raise BlockJobExistsError()
         self._sync_block_job_info()
-        self._sync_metadata()
+        self.sync_metadata()
         self._updateDomainDescriptor()
 
     def untrackBlockJob(self, jobID):
@@ -5127,7 +5131,7 @@ class Vm(object):
 
         self._sync_disk_metadata()
         self._sync_block_job_info()
-        self._sync_metadata()
+        self.sync_metadata()
         self._updateDomainDescriptor()
         return True
 

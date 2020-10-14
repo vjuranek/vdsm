@@ -405,7 +405,7 @@ def VM(params=None, devices=None, runCpu=False,
             fake = vm.Vm(cif, params, recover=recover)
             cif.vmContainer[fake.id] = fake
             fake._update_metadata = lambda: None
-            fake._sync_metadata = lambda: None
+            fake.sync_metadata = lambda: None
             fake.send_status_event = lambda **kwargs: None
             fake.arch = arch
             fake.guestAgent = GuestAgent()
