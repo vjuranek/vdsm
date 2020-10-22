@@ -205,6 +205,11 @@ class TestPortMirror(object):
         else:
             return True
 
+    @pytest.mark.xfail(
+        condition=running_on_travis_ci(),
+        reason='does not work on  Travis CI with nmstate',
+        strict=False,
+    )
     def test_mirroring(self):
         tc.setPortMirroring(self._bridge0.devName, self._bridge1.devName)
         assert self._send_ping(), 'Bridge received no mirrored ping requests.'
