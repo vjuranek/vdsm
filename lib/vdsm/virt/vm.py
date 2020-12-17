@@ -4595,8 +4595,9 @@ class Vm(object):
         blockdev = drivename.make(
             cdromspec['iface'], cdromspec['index'])
         iface = cdromspec['iface']
-        return self._changeBlockDev('cdrom', blockdev, drivespec, iface,
-                                    force=bool(drivespec))
+        self._changeBlockDev('cdrom', blockdev, drivespec, iface,
+                             force=bool(drivespec))
+        return {'vmList': {}}
 
     def changeFloppy(self, drivespec):
         return self._changeBlockDev('floppy', 'fda', drivespec)
@@ -4702,8 +4703,6 @@ class Vm(object):
 
         if vmDev in self.conf:
             self.cif.teardownVolumePath(self.conf[vmDev])
-
-        return {'vmList': {}}
 
     def _change_cd(self, device, drive_spec, iface=None, force=True):
         # Store temporary CD metadata.
